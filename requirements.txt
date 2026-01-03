@@ -1,0 +1,7 @@
+Flask==2.3.0
+opencv-python==4.8.0.74
+numpy==1.24.3
+picamera==1.13
+RPi.GPIO==0.7.1
+rpi-ws281x==5.0.0
+imutils==0.5.4

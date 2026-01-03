@@ -11,6 +11,7 @@ from Buzzer import *
 from Led import *
 from ADC import *
 from Servo import *
+from config import *
 
 # Raspberry Pi camera module (requires picamera package)
 # from camera_pi import Camera
@@ -110,4 +111,6 @@ def get_voltage():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', threaded=True, port=80)
+    print(f"Starting web server on {WEB_HOST}:{WEB_PORT}")
+    print(f"Access the control panel at http://<your-pi-ip>:{WEB_PORT}")
+    app.run(host=WEB_HOST, threaded=True, port=WEB_PORT)

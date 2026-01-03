@@ -1,50 +1,68 @@
 import cv2
-from Motor import*
-from Servo import*
-from CalcAngle import*
+import time
+import numpy as np
+import imutils
+from Motor import *
+from Servo import *
+from CalcAngle import *
 import sys
 from picamera import PiCamera
 from picamera.array import PiRGBArray
+from config import *
 
-SCREEN_WIDTH = 320
-SCREEN_HEIGHT = 240
+SCREEN_WIDTH = CAMERA_WIDTH
+SCREEN_HEIGHT = CAMERA_HEIGHT
 camera = PiCamera()
 
 camera.resolution = (SCREEN_WIDTH, SCREEN_HEIGHT)
-camera.framerate = 10
+camera.framerate = CAMERA_FPS
 rawCapture = PiRGBArray(camera, size=(SCREEN_WIDTH, SCREEN_HEIGHT))
-#allow the camera to warmup
-time.sleep()
 
-#camera = cv2.VideoCapture(-1)
-#camera.set(3, SCREEN_WIDTH)
-#camera.set(4, SCREEN_HEIGHT)
+# Allow the camera to warmup
+time.sleep(0.1)
 
 PWM = Motor()
 SRV = Servo()
-CLC = CalcAngle(SCREEN_HEIGHT, SCREEN_WIDTH)
+# Initialize CalcAngle with proper color parameters from config
+CLC = CalcAngle(SCREEN_HEIGHT, SCREEN_WIDTH, LOWER_HSV, UPPER_HSV)
 
 def main():
-    for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port = True):
-        frame = frame.array
-        frame = imutils.rotate(frame, angle=180) 
-        angle = CLC.get_angle(frame)
-        SRV.setServoPwm('4',angle)
-        PWM.setMotorModel(40, 40, )
-    pass
     """
-    while we get a frame 
-    compute the angle 
-    set the servo 
-    set the motor
+    Main autonomous driving loop.
+    Continuously captures frames, detects lanes, and adjusts steering.
     """
+    print("Starting autonomous mode...")
+    print("Press Ctrl+C to stop")
     
+    for frame_data in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+        # Get the frame array
+        frame = frame_data.array
+        
+        # Rotate frame 180 degrees (adjust based on camera mounting)
+        frame = imutils.rotate(frame, angle=180)
+        
+        # Calculate steering angle based on detected lanes
+        angle = CLC.get_angle(frame)
+        
+        # Set servo to calculated angle
+        SRV.setServoPwm(SERVO_CHANNEL, angle)
+        
+        # Move forward with specified speed and motor corrections
+        PWM.setMotorModel(DEFAULT_SPEED, DEFAULT_SPEED, MOTOR_CORRECTION_LEFT, MOTOR_CORRECTION_RIGHT)
+        
+        # Clear the stream for the next frame
+        rawCapture.truncate(0)
+
+if __name__ == "__main__":
     try:
-        main() # run the main function
+        main()
     except KeyboardInterrupt:
-        print("Bye")
+        print("\nStopping...")
     finally:
-        PWM.setMotorModel(0,0)
-        SRV.setServoPwm('4',)
+        # Clean shutdown
+        print("Shutting down motors and servos...")
+        PWM.setMotorModel(0, 0, 0, 0)  # Stop all motors
+        SRV.setServoPwm(SERVO_CHANNEL, SERVO_CENTER)  # Center the servo
         camera.close()
+        print("Bye!")
         sys.exit()
